@@ -1,0 +1,23 @@
+{
+  "name": "preact-signals-reactive",
+  "version": "1.0.0",
+  "description": "Coming from Vue, I missed the convenience of putting a full state object into a `reactive` and using it as a sort of store. In Preact, this has been a bit more challenging since putting a full object of state into a signal will cause all relevant subscribers to re-render, even if only a small part of it is updated. This is basically a re-implementation of vue's reactive except, under the hood all state keys in the object are held in preact signals. This works recursively, but currently does not support changing shape over time (and I don't forsee needing that in the future for my use cases). Like the vue api, you can get the raw value of the state using a helper function, `getRaw`: ``` const state = useReactive({   age: 35,   name: 'John' });",
+  "homepage": "https://github.com/CalebBertrand/preact-signals-reactive#readme",
+  "bugs": {
+    "url": "https://github.com/CalebBertrand/preact-signals-reactive/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CalebBertrand/preact-signals-reactive.git"
+  },
+  "license": "ISC",
+  "author": "Caleb Bertrand",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.0.4"
+  }
+}
