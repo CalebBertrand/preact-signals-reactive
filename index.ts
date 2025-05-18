@@ -1,9 +1,9 @@
 import { Signal, signal } from '@preact/signals';
-import { useMemo } from 'preact/hooks';
-import { Entry } from './type-utils/Entry';
-import { OmitByType } from './type-utils/OmitByType';
+import { Entry } from '../types/Entry';
 import { assert } from './assert';
-import { Filtered } from './type-utils/Filtered';
+import { Filtered } from '../types/Filtered';
+import { useMemo } from 'preact/hooks';
+import { OmitByType } from '../types/OmitByType';
 
 export type AtomicState = number | string | boolean | Date | Array<any> | undefined;
 
@@ -43,13 +43,18 @@ export type ShallowReactive<T extends ReactiveState = any> = {
 const valueTypes = ['undefined', 'string', 'number', 'boolean'];
 function isValueType(
     value: unknown
-): value is undefined | string | number | boolean | Array<any> | Date {
-    return valueTypes.includes(typeof value) || value instanceof Date || value instanceof Array;
+): value is undefined | null | string | number | boolean | Array<any> | Date {
+    return (
+        value === null ||
+        valueTypes.includes(typeof value) ||
+        value instanceof Date ||
+        value instanceof Array
+    );
 }
 
 const reactiveHelpers = Symbol('reactiveHelpers');
 export function isReactive(value: unknown): value is Reactive {
-    return !!value[reactiveHelpers];
+    return value && !!value[reactiveHelpers];
 }
 
 export const getRaw = <T extends ReactiveState>(x: Reactive<T>) =>
@@ -191,4 +196,5 @@ export const useReactive = <T extends ReactiveState>(initialValue: T) => {
 export const useShallowReactive = <T extends ShallowReactiveState>(initialValue: T) => {
     return useMemo(() => shallowReactive(initialValue), [initialValue]);
 };
-
+export const useToSignal = <T extends Reactive>(reactive: T, key: keyof T) =>
+    useMemo(() => toSignal(reactive, key as any), [reactive, key]);
