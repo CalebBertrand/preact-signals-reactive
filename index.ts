@@ -20,8 +20,6 @@ type InnerReactive<T extends ReactiveState> = {
           : Function;
 };
 
-export type ReactiveEntry<T extends InnerReactive<any>> = Entry<OmitByType<T, Function>>;
-
 export interface ShallowReactiveState {
     [key: string]: any; // since we don't have to worry about recursively creating reactives, no reason to restrict the values a shallow can store
 }
@@ -62,28 +60,53 @@ export const getRaw = <T extends ReactiveState>(x: Reactive<T>) =>
 export const toSignal = <T extends ReactiveState, K extends keyof T>(x: Reactive<T>, key: K) =>
     (x[reactiveHelpers as any] as any).getUnderlyingSignal(key) as Signal<T[K]>;
 
-export const reactive = <T extends ReactiveState>(initialState: T) => {
-    const signalified = Object.fromEntries(
-        Object.entries(initialState).map(([key, value]: Entry<T>) => {
-            if (isValueType(value)) {
+const _reactive = <T extends ReactiveState>(initialState: T, shallow = false) => {
+    let signalified: InnerReactive<T>;
+    if (shallow) {
+        signalified = Object.fromEntries(
+            Object.entries(initialState).map(([key, value]: Entry<T>) => {
+                if (value instanceof Function) {
+                    return [key, value];
+                }
+
+                if (isValueType(value)) {
+                    return [key, signal(value)];
+                }
+
+                if (value instanceof Signal) {
+                    return [key, value];
+                }
+
+                if (isReactive(value)) {
+                    return [key, signal(getRaw(value))];
+                }
+
                 return [key, signal(value)];
-            }
+            })
+        ) as InnerReactive<T>;
+    } else {
+        signalified = Object.fromEntries(
+            Object.entries(initialState).map(([key, value]: Entry<T>) => {
+                if (value instanceof Function) {
+                    return [key, value];
+                }
 
-            if (value instanceof Function) {
-                return [key, value];
-            }
+                if (isValueType(value)) {
+                    return [key, signal(value)];
+                }
 
-            if (value instanceof Signal) {
-                return [key, value];
-            }
+                if (value instanceof Signal) {
+                    return [key, value];
+                }
 
-            if (isReactive(value)) {
-                return [key, value];
-            }
+                if (isReactive(value)) {
+                    return [key, value];
+                }
 
-            return [key, reactive(value)];
-        })
-    ) as InnerReactive<T>;
+                return [key, _reactive(value)];
+            })
+        ) as InnerReactive<T>;
+    }
 
     const proxied = new Proxy(signalified, {
         set(target, key, value) {
@@ -151,6 +174,10 @@ export const reactive = <T extends ReactiveState>(initialState: T) => {
                                 typeof target[key] !== 'function',
                                 'Cannot call toSignal on a function property.'
                             );
+                            assert(
+                                !isReactive(target[key]),
+                                'Cannot call toSignal on a nested reactive'
+                            );
                             return target[key];
                         }
                     };
@@ -187,11 +214,13 @@ export const reactive = <T extends ReactiveState>(initialState: T) => {
     return proxied as Reactive<T>;
 };
 
-const shallowReactive = <T extends ShallowReactiveState>(initialState: T) =>
-    reactive(initialState) as ShallowReactive<T>;
+export const reactive = <T extends ReactiveState>(initialState: T) =>
+    _reactive(initialState) as Reactive<T>;
+export const shallowReactive = <T extends ShallowReactiveState>(initialState: T) =>
+    _reactive(initialState, true) as ShallowReactive<T>;
 
 export const useReactive = <T extends ReactiveState>(initialValue: T) => {
-    return useMemo(() => reactive(initialValue), [initialValue]);
+    return useMemo(() => _reactive(initialValue), [initialValue]);
 };
 export const useShallowReactive = <T extends ShallowReactiveState>(initialValue: T) => {
     return useMemo(() => shallowReactive(initialValue), [initialValue]);
